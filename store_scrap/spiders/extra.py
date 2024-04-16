@@ -1,0 +1,89 @@
+from typing import Iterable
+from urllib.parse import urljoin
+
+import jsonpath_ng as jsonpath
+from scrapy import Spider
+from scrapy.http import JsonRequest, TextResponse
+
+from store_scrap.items import Product
+
+
+class ExtraSpider(Spider):
+    name = "extra"
+    allowed_domains = ["ml6pm6jwsi-3.algolianet.com"]
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:124.0) Gecko/20100101 Firefox/124.0",
+        "Accept": "*/*",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate, br",
+        "content-type": "application/x-www-form-urlencoded",
+        "Origin": "https://www.extra.com",
+        "Connection": "keep-alive",
+        "Referer": "https://www.extra.com/",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "cross-site"
+    }
+
+    per_page = 48
+
+    def get_payload(self, category, page=0):
+        return {"requests":[
+            # {"indexName": "prod_sa_product_index", "query":"",
+            #  "params":f"optionalFilters=%5B%22sellingOutFastCities%3ASA-tabuk%3Cscore%3D5%3E%22%2C%22inStockCities%3ASA-tabuk%3Cscore%3D5%3E%22%5D&facets=%5B%22productFeaturesAr.*%22%2C%22brandAr%22%2C%22subFamilyAr%22%2C%22rating%22%2C%22productStatusAr%22%2C%22price%22%2C%22offersFacet%22%2C%22inStock%22%2C%22hasFreeGifts%22%2C%22familyAr%22%2C%22deliveryFacet%22%5D&hitsPerPage=1&page=0&getRankingInfo=1&clickAnalytics=false&filters=categories%3A{category}&facetFilters=%5B%5B%22sponsoredType%3AEXTRASPECIAL%22%5D%5D"},
+            # {"indexName":"prod_sa_product_index","query":"",
+            #  "params":f"optionalFilters=%5B%22sellingOutFastCities%3ASA-tabuk%3Cscore%3D5%3E%22%2C%22inStockCities%3ASA-tabuk%3Cscore%3D5%3E%22%5D&facets=%5B%22productFeaturesAr.*%22%2C%22brandAr%22%2C%22subFamilyAr%22%2C%22rating%22%2C%22productStatusAr%22%2C%22price%22%2C%22offersFacet%22%2C%22inStock%22%2C%22hasFreeGifts%22%2C%22familyAr%22%2C%22deliveryFacet%22%5D&hitsPerPage=2&page=0&getRankingInfo=1&clickAnalytics=false&filters=categories%3A{category}&facetFilters=%5B%5B%22sponsoredType%3ASPONSORED%22%5D%5D"},
+            {"indexName": "prod_sa_product_index", "query": "",
+             "params":f"optionalFilters=%5B%22sellingOutFastCities%3ASA-tabuk%3Cscore%3D5%3E%22%2C%22inStockCities%3ASA-tabuk%3Cscore%3D5%3E%22%5D&facets=%5B%22productFeaturesAr.*%22%2C%22brandAr%22%2C%22subFamilyAr%22%2C%22rating%22%2C%22productStatusAr%22%2C%22price%22%2C%22offersFacet%22%2C%22inStock%22%2C%22hasFreeGifts%22%2C%22familyAr%22%2C%22deliveryFacet%22%5D&hitsPerPage={self.per_page}&page={page}&getRankingInfo=1&clickAnalytics=true&filters=categories%3A{category}&facetFilters=%5B%5D"}
+        ]}
+
+    brand_values = {
+        'Admiral': 'ADMIRL',
+        'Hisense': 'HISENSE',
+        'Samsung': 'SAMSNG',
+    }
+
+    products_pattern = jsonpath.parse('$.results[*].hits[*]')
+
+    api_url = 'https://ml6pm6jwsi-3.algolianet.com/1/indexes/*/queries?x-algolia-agent=Algolia%20for%20JavaScript%20(4.5.1)%3B%20Browser%20(lite)&x-algolia-api-key=af1b13cfdc69ebf18c5980f2c6afff4d&x-algolia-application-id=ML6PM6JWSI'
+
+    def __init__(self, brands=(), **kwargs):
+        super().__init__(**kwargs)
+        self.brands = brands
+
+    def start_requests(self) -> Iterable[JsonRequest]:
+        for brand in self.brands:
+            if brand in self.brand_values:
+                request = JsonRequest(
+                    url=self.api_url,
+                    headers=self.headers,
+                    data=self.get_payload(self.brand_values[brand], page=0),
+                    callback=self.parse,
+                    cb_kwargs={'page': 0, 'category': self.brand_values[brand]}
+                )
+                yield request
+
+    def parse(self, response: TextResponse, category: str, page: int) -> Iterable[Product | JsonRequest]:
+        json_data = response.json()
+        products = list(map(lambda m: m.value, self.products_pattern.find(json_data)))
+        for product in products:
+            yield Product(
+                name_ar=product['nameAr'],
+                name_en=product['nameEn'],
+                description_ar=product['descriptionAr'],
+                description_en=product['descriptionEn'],
+                price_original=product['wasPrice'],
+                price_discounted=product['price'],
+                brand_ar=product['brandAr'],
+                brand_en=product['brandEn'],
+                link=urljoin('https://www.extra.com/', product.get('urlAr', product['urlEn']))
+            )
+        if len(products) == self.per_page:
+            yield JsonRequest(
+                url=self.api_url,
+                headers=self.headers,
+                data=self.get_payload(category, page=page + 1),
+                callback=self.parse,
+                cb_kwargs={'page': page + 1, 'category': category}
+            )
