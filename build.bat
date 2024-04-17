@@ -1,0 +1,1 @@
+poetry run pyinstaller --noconfirm --collect-all jsonpath_ng --collect-all scrapy_xlsx -w store_scrap.py
