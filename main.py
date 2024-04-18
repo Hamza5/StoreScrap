@@ -170,6 +170,7 @@ class CrawlingThread(QThread):
 
 def run():
     import sys
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
     app = QApplication(sys.argv)
     window = Window()
     window.show()
