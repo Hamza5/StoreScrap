@@ -1,9 +1,8 @@
-import sys
 import os
 import logging
 
 from PySide6.QtWidgets import (QApplication, QLabel, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QLineEdit,
-                               QGroupBox, QFileDialog, QCheckBox, QPlainTextEdit)
+                               QGroupBox, QFileDialog, QCheckBox, QPlainTextEdit, QMessageBox)
 from PySide6.QtCore import Slot, QObject, Signal, QThread
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
@@ -12,6 +11,7 @@ from scrapy.utils.log import configure_logging
 
 class LogSignal(QObject):
     signal = Signal(str)
+    error = Signal(str)
 
 
 class QtLogHandler(logging.Handler):
@@ -21,8 +21,10 @@ class QtLogHandler(logging.Handler):
 
     log = LogSignal()
 
-    def emit(self, log_record):
+    def emit(self, log_record: logging.LogRecord):
         message = self.format(log_record)
+        if log_record.levelno >= logging.ERROR:
+            self.log.error.emit(message)
         self.log.signal.emit(message)
 
 
@@ -89,10 +91,15 @@ class Window(QWidget):
 
         log_handler = QtLogHandler()
         log_handler.log.signal.connect(self.logs_display.appendPlainText)
+        log_handler.log.error.connect(self.show_error)
         configure_logging(install_root_handler=False)
         logging.getLogger().addHandler(log_handler)
 
         self.crawling_thread = None
+
+    @Slot(str)
+    def show_error(self, message):
+        QMessageBox.critical(self, 'Error', message)
 
     @Slot(bool)
     def category_state_changed(self, state):
@@ -150,16 +157,24 @@ class CrawlingThread(QThread):
         self.settings.set('FEEDS', {self.file_path: {'format': 'xlsx'}})
 
     def run(self):
-        process = CrawlerProcess(self.settings)
-        for website, categories in self.websites_config.items():
-            enabled_brands = [category for category, enabled in categories.items() if enabled]
-            if enabled_brands:
-                process.crawl(website.lower(), brands=enabled_brands)
-        process.start(install_signal_handlers=False)
+        try:
+            process = CrawlerProcess(self.settings)
+            for website, categories in self.websites_config.items():
+                enabled_brands = [category for category, enabled in categories.items() if enabled]
+                if enabled_brands:
+                    process.crawl(website.lower(), brands=enabled_brands)
+            process.start(install_signal_handlers=False)
+        except Exception as e:
+            logging.error(str(e))
 
 
-if __name__ == '__main__':
+def run():
+    import sys
     app = QApplication(sys.argv)
     window = Window()
     window.show()
     app.exec()
+
+
+if __name__ == '__main__':
+    run()

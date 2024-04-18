@@ -1,9 +1,15 @@
 [tool.poetry]
-name = "storescrap"
-version = "0.1.0"
+name = "store_scrap"
+version = "0.1.2"
 description = ""
 authors = ["Hamza <hamza.abbad@gmail.com>"]
-readme = "README.md"
+packages = [
+    { include = "store_scrap", from = "." },
+]
+include = ["scrapy.cfg", "main.py"]
+
+[tool.poetry.scripts]
+store_scrap = "main:run"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
@@ -12,9 +18,6 @@ jsonpath-ng = "^1.6.1"
 scrapy-xlsx = "^0.1.1"
 pyside6 = "^6.7.0"
 
-
-[tool.poetry.group.dev.dependencies]
-pyinstaller = "^6.6.0"
 
 [build-system]
 requires = ["poetry-core"]
