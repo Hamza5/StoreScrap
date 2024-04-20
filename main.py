@@ -59,6 +59,12 @@ class Window(QWidget):
                 'Samsung': True,
                 'Admiral': True,
                 # 'Konka': True,
+            },
+            'Almanea': {
+                'Hisense': True,
+                'Samsung': True,
+                # 'Admiral': True,
+                # 'Konka': True,
             }
         }
 
@@ -67,6 +73,9 @@ class Window(QWidget):
         main_layout.addWidget(self.websites_section)
         for name in self.websites_config.keys():
             website_section = QGroupBox(name)
+            website_section.setCheckable(True)
+            website_section.setChecked(True)
+            website_section.toggled.connect(self.website_toggled)
             website_layout = QHBoxLayout(website_section)
             websites_layout.addWidget(website_section)
             for brand, checked in self.websites_config[name].items():
@@ -102,6 +111,12 @@ class Window(QWidget):
         QMessageBox.critical(self, 'Error', message)
 
     @Slot(bool)
+    def website_toggled(self, state):
+        groupbox = self.sender()
+        for checkbox in groupbox.findChildren(QCheckBox):
+            checkbox.setChecked(state)
+
+    @Slot(bool)
     def category_state_changed(self, state):
         checkbox = self.sender()
         website = checkbox.parentWidget().title()
@@ -116,14 +131,10 @@ class Window(QWidget):
 
     @Slot()
     def open_save_dialog(self):
-        file_dialog = QFileDialog()
-        file_dialog.setFileMode(QFileDialog.AnyFile)
-        file_dialog.setAcceptMode(QFileDialog.AcceptSave)
-        file_dialog.setNameFilter('Excel files (*.xlsx)')
-        file_dialog.exec()
-        if file_dialog.result():
-            file_path = file_dialog.selectedFiles()[0]
-            self.file_path_input.setText(file_path)
+        home_dir = os.path.expanduser('~')
+        save_file_path, _ = QFileDialog.getSaveFileName(self, 'Save results to', home_dir, 'Excel files (*.xlsx)')
+        if save_file_path:
+            self.file_path_input.setText(save_file_path)
 
     @Slot()
     def disable_ui(self):
@@ -154,7 +165,7 @@ class CrawlingThread(QThread):
         self.websites_config = website_configs
         self.file_path = file_path
         self.settings = get_project_settings()
-        self.settings.set('FEEDS', {self.file_path: {'format': 'xlsx'}})
+        self.settings.set('EXCEL_FILE_PATH', file_path)
 
     def run(self):
         try:

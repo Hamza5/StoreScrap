@@ -15,3 +15,9 @@ class Product(scrapy.Item):
     brand_ar = scrapy.Field()
     brand_en = scrapy.Field()
     link = scrapy.Field()
+    sku = scrapy.Field()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name in self.fields:
+            self.setdefault(field_name, '')

@@ -4,6 +4,7 @@ from urllib.parse import urljoin
 import jsonpath_ng as jsonpath
 from scrapy import Spider
 from scrapy.http import JsonRequest, TextResponse
+from scrapy.utils.display import pprint
 
 from store_scrap.items import Product
 
@@ -48,7 +49,7 @@ class ExtraSpider(Spider):
 
     api_url = 'https://ml6pm6jwsi-3.algolianet.com/1/indexes/*/queries?x-algolia-agent=Algolia%20for%20JavaScript%20(4.5.1)%3B%20Browser%20(lite)&x-algolia-api-key=af1b13cfdc69ebf18c5980f2c6afff4d&x-algolia-application-id=ML6PM6JWSI'
 
-    def __init__(self, brands=(), **kwargs):
+    def __init__(self, brands=tuple(brand_values.keys()), **kwargs):
         super().__init__(**kwargs)
         self.brands = brands
 
@@ -77,7 +78,8 @@ class ExtraSpider(Spider):
                 price_discounted=product['price'],
                 brand_ar=product['brandAr'],
                 brand_en=product['brandEn'],
-                link=urljoin('https://www.extra.com/', product.get('urlAr', product['urlEn']))
+                link=urljoin('https://www.extra.com/', product.get('urlAr', product['urlEn'])),
+                sku=product['productCode']
             )
         if len(products) == self.per_page:
             yield JsonRequest(
