@@ -65,7 +65,13 @@ class Window(QWidget):
                 'Samsung': True,
                 # 'Admiral': True,
                 # 'Konka': True,
-            }
+            },
+            'Carrefour KSA': {
+                'Hisense': True,
+                'Samsung': True,
+                'Admiral': True,
+                'Konka': True,
+            },
         }
 
         self.websites_section = QGroupBox('Websites')
@@ -173,7 +179,7 @@ class CrawlingThread(QThread):
             for website, categories in self.websites_config.items():
                 enabled_brands = [category for category, enabled in categories.items() if enabled]
                 if enabled_brands:
-                    process.crawl(website.lower(), brands=enabled_brands)
+                    process.crawl(website.lower().replace(' ', '_'), brands=enabled_brands)
             process.start(install_signal_handlers=False)
         except Exception as e:
             logging.error(str(e))

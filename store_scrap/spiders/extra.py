@@ -1,31 +1,17 @@
 from typing import Iterable
 from urllib.parse import urljoin
+import re
 
 import jsonpath_ng as jsonpath
-from scrapy import Spider
 from scrapy.http import JsonRequest, TextResponse
-from scrapy.utils.display import pprint
 
 from store_scrap.items import Product
+from store_scrap.spiders.storescrap import StoreScrapSpider
 
 
-class ExtraSpider(Spider):
+class ExtraSpider(StoreScrapSpider):
     name = "extra"
     allowed_domains = ["ml6pm6jwsi-3.algolianet.com"]
-
-    headers = {
-        "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:124.0) Gecko/20100101 Firefox/124.0",
-        "Accept": "*/*",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Accept-Encoding": "gzip, deflate, br",
-        "content-type": "application/x-www-form-urlencoded",
-        "Origin": "https://www.extra.com",
-        "Connection": "keep-alive",
-        "Referer": "https://www.extra.com/",
-        "Sec-Fetch-Dest": "empty",
-        "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Site": "cross-site"
-    }
 
     per_page = 48
 
@@ -48,10 +34,6 @@ class ExtraSpider(Spider):
     products_pattern = jsonpath.parse('$.results[*].hits[*]')
 
     api_url = 'https://ml6pm6jwsi-3.algolianet.com/1/indexes/*/queries?x-algolia-agent=Algolia%20for%20JavaScript%20(4.5.1)%3B%20Browser%20(lite)&x-algolia-api-key=af1b13cfdc69ebf18c5980f2c6afff4d&x-algolia-application-id=ML6PM6JWSI'
-
-    def __init__(self, brands=tuple(brand_values.keys()), **kwargs):
-        super().__init__(**kwargs)
-        self.brands = brands
 
     def start_requests(self) -> Iterable[JsonRequest]:
         for brand in self.brands:
@@ -79,7 +61,7 @@ class ExtraSpider(Spider):
                 brand_ar=product['brandAr'],
                 brand_en=product['brandEn'],
                 link=urljoin('https://www.extra.com/', product.get('urlAr', product['urlEn'])),
-                sku=product['productCode']
+                sku=self.get_model_code(product['descriptionEn'])
             )
         if len(products) == self.per_page:
             yield JsonRequest(
@@ -89,3 +71,10 @@ class ExtraSpider(Spider):
                 callback=self.parse,
                 cb_kwargs={'page': page + 1, 'category': category}
             )
+
+    def get_model_code(self, product_name):
+        return re.split(r'-+', product_name, 1)[0].strip()
+
+    @property
+    def origin(self):
+        return "https://www.extra.com/"
