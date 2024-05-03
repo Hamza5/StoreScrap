@@ -1,12 +1,12 @@
-import os
 import logging
+import os
 
-from PySide6.QtWidgets import (QApplication, QLabel, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QLineEdit,
-                               QGroupBox, QFileDialog, QCheckBox, QPlainTextEdit, QMessageBox)
 from PySide6.QtCore import Slot, QObject, Signal, QThread
+from PySide6.QtWidgets import (QApplication, QLabel, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QLineEdit,
+                               QGroupBox, QFileDialog, QCheckBox, QPlainTextEdit, QGridLayout)
 from scrapy.crawler import CrawlerProcess
-from scrapy.utils.project import get_project_settings
 from scrapy.utils.log import configure_logging
+from scrapy.utils.project import get_project_settings
 
 
 class LogSignal(QObject):
@@ -25,7 +25,8 @@ class QtLogHandler(logging.Handler):
         message = self.format(log_record)
         if log_record.levelno >= logging.ERROR:
             self.log.error.emit(message)
-        self.log.signal.emit(message)
+        else:
+            self.log.signal.emit(message)
 
 
 class Window(QWidget):
@@ -58,13 +59,10 @@ class Window(QWidget):
                 'Hisense': True,
                 'Samsung': True,
                 'Admiral': True,
-                # 'Konka': True,
             },
             'Almanea': {
                 'Hisense': True,
                 'Samsung': True,
-                # 'Admiral': True,
-                # 'Konka': True,
             },
             'Carrefour KSA': {
                 'Hisense': True,
@@ -72,18 +70,21 @@ class Window(QWidget):
                 'Admiral': True,
                 'Konka': True,
             },
+            'Zagzoog': {
+                'Hisense': True,
+            }
         }
 
         self.websites_section = QGroupBox('Websites')
-        websites_layout = QVBoxLayout(self.websites_section)
+        websites_layout = QGridLayout(self.websites_section)
         main_layout.addWidget(self.websites_section)
-        for name in self.websites_config.keys():
+        for i, name in enumerate(self.websites_config.keys()):
             website_section = QGroupBox(name)
             website_section.setCheckable(True)
             website_section.setChecked(True)
             website_section.toggled.connect(self.website_toggled)
             website_layout = QHBoxLayout(website_section)
-            websites_layout.addWidget(website_section)
+            websites_layout.addWidget(website_section, i // 2, i % 2)
             for brand, checked in self.websites_config[name].items():
                 checkbox = QCheckBox()
                 checkbox.setText(brand)
@@ -100,6 +101,7 @@ class Window(QWidget):
         logs_layout = QVBoxLayout(logs)
         self.logs_display = QPlainTextEdit()
         logs_layout.addWidget(self.logs_display)
+        self.logs_display.setMinimumHeight(300)
         self.logs_display.setReadOnly(True)
         self.logs_display.setPlaceholderText('Logs will be displayed here...')
         main_layout.addWidget(logs)
@@ -114,13 +116,18 @@ class Window(QWidget):
 
     @Slot(str)
     def show_error(self, message):
-        QMessageBox.critical(self, 'Error', message)
+        self.logs_display.appendHtml(
+            f'<pre style="color: red;">{message}</pre>'
+        )
 
     @Slot(bool)
     def website_toggled(self, state):
         groupbox = self.sender()
         for checkbox in groupbox.findChildren(QCheckBox):
             checkbox.setChecked(state)
+        self.run_button.setDisabled(
+            all(not checkbox.isChecked() for checkbox in self.websites_section.findChildren(QCheckBox))
+        )
 
     @Slot(bool)
     def category_state_changed(self, state):

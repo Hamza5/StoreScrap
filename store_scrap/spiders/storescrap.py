@@ -1,5 +1,6 @@
 import abc
 import re
+
 import scrapy
 
 
@@ -11,6 +12,8 @@ class StoreScrapSpider(abc.ABC, scrapy.Spider):
         'Konka': None,
         'Samsung': None,
     }
+
+    allowed_domains = []
 
     def __init__(self, brands=tuple(brand_values.keys()), **kwargs):
         super().__init__(**kwargs)
@@ -38,6 +41,5 @@ class StoreScrapSpider(abc.ABC, scrapy.Spider):
         return candidates[0] if candidates else ''
 
     @property
-    @abc.abstractmethod
     def origin(self):
-        pass
+        return f"https://{self.allowed_domains[0]}"
