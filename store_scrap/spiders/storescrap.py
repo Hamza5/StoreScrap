@@ -34,10 +34,12 @@ class StoreScrapSpider(abc.ABC, scrapy.Spider):
         }
         self.cookies = {}
 
-    UPPER_LETTERS_NUMBERS_RE = re.compile(r'[A-Z0-9/]+[A-Z][A-Z0-9/]+', re.ASCII | re.IGNORECASE)
+    UPPER_LETTERS_NUMBERS_RE = re.compile(r'[A-Z0-9]+[A-Z/-][A-Z0-9]+', re.ASCII)
 
     def get_model_code(self, product_name):
-        candidates = sorted(self.UPPER_LETTERS_NUMBERS_RE.findall(product_name), key=len, reverse=True)
+        candidates = sorted(
+            filter(lambda x: len(x) > 3, self.UPPER_LETTERS_NUMBERS_RE.findall(product_name)), key=len, reverse=True
+        )
         return candidates[0] if candidates else ''
 
     @property

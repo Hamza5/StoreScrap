@@ -1,8 +1,10 @@
+import json
 from typing import Iterable
 from urllib.parse import urljoin
 
-from scrapy.http import JsonRequest, TextResponse, Request
 from jsonpath_ng import parse
+from scrapy.http import JsonRequest, TextResponse, Request
+from w3lib.html import remove_tags
 
 from store_scrap.items import Product
 from store_scrap.spiders.storescrap import StoreScrapSpider
@@ -12,7 +14,7 @@ class AlmaneaSpider(StoreScrapSpider):
     name = "almanea"
     allowed_domains = ["almanea.sa"]
 
-    region_id = "1116"
+    region_id = "1101"
 
     cookies = {
         "__Secure-next-auth.callback-url": "https%3A%2F%2Fwww.almanea.sa%2F",
@@ -78,7 +80,7 @@ class AlmaneaSpider(StoreScrapSpider):
         for product_data in parse('$..products[*]._source').find(json_data):
             product_data = product_data.value
             name_ar = self.get_field_value(product_data, '$.name').pop()
-            yield Product(
+            product = Product(
                 name_ar=name_ar,
                 price_original=self.get_field_value(product_data, 'original_price'),
                 price_discounted=self.get_field_value(product_data, 'price'),
@@ -87,8 +89,20 @@ class AlmaneaSpider(StoreScrapSpider):
                     'https://www.almanea.sa/product/',
                     self.get_field_value(product_data, 'url_key').pop(),
                 ),
+                description_ar=remove_tags(product_data.get('short_description', [''])[0]).strip(),
                 sku=self.get_model_code(name_ar),
+                id=product_data['sku']
             )
+            if not product['sku']:
+                yield Request(
+                    url=product['link'],
+                    headers=self.headers,
+                    cookies=self.cookies,
+                    callback=self.parse_pdp,
+                    cb_kwargs={'product': product}
+                )
+            else:
+                yield product
         if current_page < pages:
             yield JsonRequest(
                 url=self.search_api,
@@ -98,6 +112,11 @@ class AlmaneaSpider(StoreScrapSpider):
                 callback=self.parse,
                 cb_kwargs={'brand_name': brand_name, 'brand_id': brand_id},
             )
+
+    def parse_pdp(self, response: TextResponse, product: Product):
+        json_data = json.loads(response.css('script#__NEXT_DATA__::text').get())
+        product['sku'] = self.get_field_value(json_data, 'pageProps.product.model').pop()
+        yield product
 
     @property
     def origin(self):

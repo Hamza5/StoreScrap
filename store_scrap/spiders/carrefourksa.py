@@ -3,8 +3,8 @@ from typing import Iterable
 from scrapy import Request
 from scrapy.http import TextResponse
 
-from store_scrap.spiders.storescrap import StoreScrapSpider
 from store_scrap.items import Product
+from store_scrap.spiders.storescrap import StoreScrapSpider
 
 
 class CarrefourksaSpider(StoreScrapSpider):
@@ -65,15 +65,25 @@ class CarrefourksaSpider(StoreScrapSpider):
     def parse(self, response: TextResponse, brand_ar: str, page: int) -> Iterable[Product]:
         response_json = response.json()
         for product_json in response_json['products']:
-            yield Product(
+            product = Product(
                 name_ar=product_json['name'],
                 brand_ar=brand_ar,
                 brand_en=product_json['brand']['name'],
                 price_original=product_json['price']['price'],
                 price_discounted=product_json['price'].get('discount', {}).get('price', ''),
                 link=response.urljoin(product_json['links']['productUrl']['href']),
-                sku=self.get_model_code(product_json['name'])
+                sku=self.get_model_code(product_json['name']),
+                id=product_json.get('ean', product_json['id'])
             )
+            if product['sku']:
+                yield product
+            else:
+                yield Request(
+                    url=product['link'].replace('/ar/', '/en/'),
+                    headers=self.headers,
+                    callback=self.pase_english_version,
+                    cb_kwargs={'product': product}
+                )
         if response_json['totalProducts'] > (page + 1) * self.per_page:
             yield Request(
                 url=self.api.format(keyword=brand_ar, page=page + 1, per_page=self.per_page),
@@ -81,6 +91,10 @@ class CarrefourksaSpider(StoreScrapSpider):
                 callback=self.parse,
                 cb_kwargs={'brand_ar': brand_ar, 'page': page + 1}
             )
+
+    def pase_english_version(self, response: TextResponse, product: Product):
+        product['sku'] = self.get_model_code(response.css('title::text').get())
+        yield product
 
     @property
     def origin(self):

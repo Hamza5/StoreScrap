@@ -16,8 +16,11 @@ class Product(scrapy.Item):
     brand_en = scrapy.Field()
     link = scrapy.Field()
     sku = scrapy.Field()
+    id = scrapy.Field()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field_name in self.fields:
             self.setdefault(field_name, '')
+            if isinstance(self[field_name], float):
+                self[field_name] = round(self[field_name], 2)

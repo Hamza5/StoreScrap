@@ -1,6 +1,5 @@
 from typing import Iterable
 from urllib.parse import urljoin
-import re
 
 import jsonpath_ng as jsonpath
 from scrapy.http import JsonRequest, TextResponse
@@ -61,7 +60,8 @@ class ExtraSpider(StoreScrapSpider):
                 brand_ar=product['brandAr'],
                 brand_en=product['brandEn'],
                 link=urljoin('https://www.extra.com/', product.get('urlAr', product['urlEn'])),
-                sku=self.get_model_code(product['descriptionEn'])
+                sku=self.get_model_code(product['descriptionEn']),
+                id=product['barCode'][0] if product.get('barCode') else ''
             )
         if len(products) == self.per_page:
             yield JsonRequest(
@@ -72,8 +72,11 @@ class ExtraSpider(StoreScrapSpider):
                 cb_kwargs={'page': page + 1, 'category': category}
             )
 
-    def get_model_code(self, product_name):
-        return re.split(r'-+', product_name, 1)[0].strip()
+    def get_model_code(self, product_name: str):
+        parts = product_name.split('--', 1)
+        if len(parts) == 1:
+            parts = product_name.split('-', 1)
+        return parts[0].strip()
 
     @property
     def origin(self):

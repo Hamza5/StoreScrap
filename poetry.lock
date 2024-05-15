@@ -850,21 +850,6 @@ w3lib = ">=1.17.0"
 "zope.interface" = ">=5.1.0"
 
 [[package]]
-name = "scrapy-xlsx"
-version = "0.1.1"
-description = "XLSX exporter for Scrapy"
-optional = false
-python-versions = "*"
-files = [
-    {file = "scrapy-xlsx-0.1.1.tar.gz", hash = "sha256:fb82ff8b0e576d9eb9d31acb872dd85b0de1630c831a00d973b88bfeb1b97332"},
-    {file = "scrapy_xlsx-0.1.1-py3-none-any.whl", hash = "sha256:0efbc211c20c9290c796492de861c02ee9c82d01b3babad6b62ca6f1f5a3272f"},
-]
-
-[package.dependencies]
-openpyxl = "*"
-scrapy = "*"
-
-[[package]]
 name = "service-identity"
 version = "24.1.0"
 description = "Service identity verification for pyOpenSSL & cryptography."
@@ -1108,4 +1093,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "7ea12b8edd1a641886204d002544aadf4fb887088425700df9d05d1b811a90ef"
+content-hash = "5ac641f884efccca673f072465598db8d1788371dfc0c886bd99786c6aa30e49"

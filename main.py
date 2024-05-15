@@ -69,9 +69,6 @@ class Window(QWidget):
                 'Samsung': True,
                 'Admiral': True,
                 'Konka': True,
-            },
-            'Zagzoog': {
-                'Hisense': True,
             }
         }
 
@@ -128,6 +125,7 @@ class Window(QWidget):
         self.run_button.setDisabled(
             all(not checkbox.isChecked() for checkbox in self.websites_section.findChildren(QCheckBox))
         )
+        self.save_path_is_valid()
 
     @Slot(bool)
     def category_state_changed(self, state):

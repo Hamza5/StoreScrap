@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "store_scrap"
-version = "0.4.0"
+version = "0.3.2"
 description = ""
 authors = ["Hamza <hamza.abbad@gmail.com>"]
 packages = [
@@ -15,8 +15,8 @@ store_scrap = "main:run"
 python = ">=3.10,<3.13"
 scrapy = "^2.11.1"
 jsonpath-ng = "^1.6.1"
-scrapy-xlsx = "^0.1.1"
 pyside6 = "^6.7.0"
+openpyxl = "^3.1.2"
 
 
 [build-system]
